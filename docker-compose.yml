@@ -1,0 +1,22 @@
+services:
+  alice:
+    build: .
+    container_name: alice
+    networks:
+      - charon
+    entrypoint:
+      - /app/charon
+    volumes:
+      - ./confs:/app/confs
+  bob:
+    build: .
+    container_name: bob
+    networks:
+      - charon
+    entrypoint:
+      - /app/charon
+    volumes:
+      - ./confs:/app/confs
+networks:
+  charon:
+    driver: bridge

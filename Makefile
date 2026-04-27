@@ -1,8 +1,8 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -g -O2 \
 	-Isrc \
-	-lprotobuf-c \
 	-DLOG_USE_COLOR
+LDFLAGS = -lprotobuf-c
 
 SRC = src/*.c \
 	  src/proto/*.c
@@ -14,7 +14,7 @@ BIN = build/charon
 all: $(BIN)
 
 $(BIN): $(SRC)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f build/*
