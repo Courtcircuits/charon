@@ -4,4 +4,4 @@
 
 void setup_route(char *ifname, char *ip_address, int mtu);
 int tun_alloc(char *ifname);
-int run_tunnel(charon_config *config);
+int open_tunnel(charon_config *config);
