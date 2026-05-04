@@ -11,10 +11,10 @@ int main() {
     return 1;
  }
 
-  aap2_client client = connect_aap2(config->aap2_address);
+  aap2_client* client = connect_aap2(config->aap2_address);
 
-  log_info(client.node_eid);
+  log_info(client->node_eid);
 
 
-  close_aap2(&client);
+  close_aap2(client);
 }

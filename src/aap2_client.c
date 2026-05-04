@@ -174,17 +174,20 @@ char *receive_welcome_message(int fd) {
     return NULL;
   }
 
-  // printf("%s\n", message);
 
   Aap2__AAPMessage *aap2_message =
       aap2__aapmessage__unpack(NULL, msg_size, message);
+  
+  if(aap2_message == NULL) {
+		  log_error("Failed to unpack message");
+  }
 
   printf("%s\n", aap2_message->welcome->node_id);
 
-  return "";
+  return aap2_message->welcome->node_id;
 }
 
-aap2_client connect_aap2(const char *aap2_url) {
+aap2_client* connect_aap2(const char *aap2_url) {
   aap2info infos = getaap2info(aap2_url);
 
   int socket_fd;
@@ -196,13 +199,17 @@ aap2_client connect_aap2(const char *aap2_url) {
   }
 
   char *node_eid = receive_welcome_message(socket_fd);
+  log_info(node_eid);
   if (node_eid == NULL) {
     exit(1);
   }
+  
+  aap2_client* client = calloc(1, sizeof(aap2_client));
 
-  aap2_client client = {
-      .node_eid = node_eid, .infos = infos, .socket_fd = socket_fd};
-
+  client->infos = infos;
+  client->node_eid = node_eid;
+  client->socket_fd = socket_fd;
+  
   return client;
 }
 
