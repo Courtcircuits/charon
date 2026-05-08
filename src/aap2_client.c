@@ -10,33 +10,33 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-int varint_decode(const uint8_t *buf, size_t buf_len, uint64_t *out) {
-  *out = 0;
-  for (int i = 0; i < 10; i++) {
-    if (i >= buf_len) {
+int recv_exact(int fd, void *buf, size_t len) {
+  size_t total = 0;
+  while (total < len) {
+    ssize_t n = recv(fd, (uint8_t *)buf + total, len - total, 0);
+    if (n <= 0)
       return -1;
+    for (size_t i = 0; i < (size_t)n; i++) {
+      printf("%02x ", ((uint8_t *)buf)[total + i]);
     }
-
-    uint64_t byte = buf[i];
-    *out |= (byte & 0x7F) << (7 * i); // append 7-bit payload
-    if (!(byte & 0x80))
-      return i + 1; // MSB not set: last byte
+    printf("\n");
+    total += n;
   }
-  return -1; // varint too long
+
+  return 0;
 }
 
-int recv_varint(int sockfd, uint64_t *out) {
-  uint8_t buf[10];
-  int i = 0;
-
-  do {
-    if (i >= 10)
+int recv_varint(int fd, uint64_t *out) {
+  *out = 0;
+  for (int shift = 0; shift < 64; shift += 7) {
+    uint8_t b;
+    if (recv_exact(fd, &b, 1) < 0)
       return -1;
-    if (recv(sockfd, &buf[i], 1, 0) != 1)
-      return -1;
-  } while (buf[i++] & 0x80); // keep reading if MSB is set
-
-  return varint_decode(buf, i, out);
+    *out |= (uint64_t)(b & 0x7F) << shift;
+    if (!(b & 0x80))
+      return 0;
+  }
+  return -1;
 }
 
 aap2info getaap2info(const char *aap2_url) {
@@ -167,19 +167,19 @@ char *receive_welcome_message(int fd) {
 
   log_info("Received everything %i", msg_size);
 
-  uint8_t* message = malloc(msg_size + 1);
+  uint8_t *message = malloc(msg_size);
 
   if (recv(fd, message, msg_size, 0) < 0) {
     log_error("Couldn't receive EID.");
     return NULL;
   }
 
-
   Aap2__AAPMessage *aap2_message =
       aap2__aapmessage__unpack(NULL, msg_size, message);
-  
-  if(aap2_message == NULL) {
-		  log_error("Failed to unpack message");
+  free(message);
+
+  if (aap2_message == NULL) {
+    log_error("Failed to unpack message");
   }
 
   printf("%s\n", aap2_message->welcome->node_id);
@@ -187,7 +187,7 @@ char *receive_welcome_message(int fd) {
   return aap2_message->welcome->node_id;
 }
 
-aap2_client* connect_aap2(const char *aap2_url) {
+aap2_client *connect_aap2(const char *aap2_url) {
   aap2info infos = getaap2info(aap2_url);
 
   int socket_fd;
@@ -203,13 +203,13 @@ aap2_client* connect_aap2(const char *aap2_url) {
   if (node_eid == NULL) {
     exit(1);
   }
-  
-  aap2_client* client = calloc(1, sizeof(aap2_client));
+
+  aap2_client *client = calloc(1, sizeof(aap2_client));
 
   client->infos = infos;
   client->node_eid = node_eid;
   client->socket_fd = socket_fd;
-  
+
   return client;
 }
 
